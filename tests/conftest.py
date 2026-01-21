@@ -54,10 +54,11 @@ def mock_s3_client():
 @pytest.fixture
 def load_lambda():
     """
-    Dynamically load the lambda functions after import time,
-    calling this fixture with the module name of the python file.
+    Pytest fixture factory to Dynamically load the lambda function modules after import time,
+    call this fixture with the module name of the specified python file containing a lambda handler.
+
     :return:
-        Callable: _load the load method, which imports the specified module.
+        Callable: _load which imports the specified module.
     """
     def _load(module_name: str) -> LambdaModule:
         module_path: str = f"src.lambdas.{module_name}"
@@ -70,7 +71,6 @@ def load_lambda():
         except ModuleNotFoundError:
             pytest.fail(f"Could not find module '{module_path}'. Check your test filename or module location.")
         except Exception as exc:
-            print(exc)
             pytest.fail(f"Failed to load module '{module_path}': {exc}")
 
     return _load
@@ -79,11 +79,10 @@ def load_lambda():
 @pytest.fixture
 def module_name(request, load_lambda):
     """
-    Convention-based fixture: automatically loads the lambda module
-    corresponding to the test file name.
+    Util method to get the python module name from the test filename.
 
     Example:
-        tests/lambdas/test_lambda_s3_call.py -> loads 'lambda_s3_call'
+        tests/lambdas/test_lambda_s3_call.py -> returns 'lambda_s3_call'
     """
     test_name = request.path.stem
     return test_name[5:] if test_name.startswith("test_") else test_name
@@ -96,7 +95,10 @@ def module_name(request, load_lambda):
 @pytest.fixture
 def lambda_handler(load_lambda, module_name):
     """
-    Returns a callable (event, context) that uses the module after mocks are applied.
+    Fixture factory to abstract the dynamic import of the lambda function to just
+    provide a 'lambda_handler' for tests, with an event and context object.
+
+    note: should be called after all other mocks within the test.
     """
     module = load_lambda(module_name)
 
